@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model order {
+  id              Int                  @id @default(autoincrement())
+  userId          Int
+  status          order_status?        @default(PENDING)
+  paymentStatus   order_paymentStatus? @default(PENDING)
+  paymentMethod   order_paymentMethod
+  shippingAddress Json
+  totalCents      Int
+   shippingCents   Int                  @default(0)
+  createdAt       DateTime?            @default(now()) @db.DateTime(0)
+  updatedAt       DateTime?            @default(now()) @db.DateTime(0)
+  user            user                 @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_order_user")
+  orderitem       orderitem[]
+
+  @@index([userId], map: "userId")
+}
+
+model orderitem {
+  id             Int     @id @default(autoincrement())
+  orderId        Int
+  productId      Int
+  qty            Int
+  unitPriceCents Int
+  order          order   @relation(fields: [orderId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_item_order")
+  product        product @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_item_product")
+
+  @@index([orderId], map: "orderId")
+  @@index([productId], map: "productId")
+}
+
+model product {
+  id        Int         @id @default(autoincrement())
+  name      String
+  price     Float
+  imageUrl  String?
+  stock     Int         @default(0)
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  orderitem orderitem[]
+}
+
+model user {
+  id            Int       @id @default(autoincrement())
+  name          String
+  email         String    @unique(map: "User_email_key")
+  passwordHash  String
+  role          String    @default("customer")
+  resetToken    String?
+  resetTokenExp DateTime?
+  createdAt     DateTime  @default(now())
+  order         order[]
+}
+
+enum order_status {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELED
+}
+
+enum order_paymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum order_paymentMethod {
+  COD
+  TRANSFER
+  CARD
+}
